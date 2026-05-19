@@ -1,0 +1,52 @@
+services:
+  - type: web
+    name: logiq-api
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: logiq-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: logiq-redis
+          property: connectionString
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ALLOWED_ORIGINS
+        value: https://your-frontend.vercel.app
+
+  - type: worker
+    name: logiq-celery
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: celery -A app.workers.tasks worker --loglevel=info --concurrency=2
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: logiq-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: logiq-redis
+          property: connectionString
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: SECRET_KEY
+        sync: false
+
+databases:
+  - name: logiq-db
+    databaseName: logiq
+    user: logiq
+    plan: free
+
+  - name: logiq-redis
+    plan: free
+    ipAllowList: []
